@@ -68,7 +68,7 @@
 }
 
 /* Popover */
-#xtb-popover[popover] {
+#xtb-popover {
   position: fixed;
   inset: auto auto auto auto;
   margin: 0;
@@ -81,17 +81,7 @@
   z-index: 2147483647;
 }
 
-/* CSS anchor positioning when supported */
-.xtb-popover--anchored {
-  position: fixed;
-  inset: auto auto auto auto;
-  /* The anchor-name is set inline on the trigger button */
-  position-try-fallbacks: flip-block, flip-inline;
-  /* Prefer below the anchor with slight offset */
-  top: anchor(--xtb-anchor top);
-  left: anchor(--xtb-anchor center);
-  transform: translateX(-50%) translateY(8px);
-}
+/* removed Popover API anchored mode */
 
 .xtb-popover {
   display: flex;
@@ -122,6 +112,7 @@
   border-radius: 6px;
   padding: 4px 8px;
   cursor: pointer;
+  line-height: 1;
 }
 
 .xtb-popover__content {

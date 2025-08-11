@@ -7,12 +7,18 @@
   
 
   let popoverEl = null;
+  let lastAnchorEl = null;
+  function closePopover() {
+    if (!popoverEl) return;
+    popoverEl.style.display = 'none';
+    popoverEl.setAttribute('aria-hidden', 'true');
+  }
   function ensurePopover() {
     if (popoverEl && document.body.contains(popoverEl)) return popoverEl;
     popoverEl = document.createElement("div");
     popoverEl.id = POPOVER_ID;
     popoverEl.className = "xtb-popover";
-    popoverEl.setAttribute("popover", "auto");
+    popoverEl.setAttribute("role", "dialog");
     popoverEl.innerHTML = `
       <div class="xtb-popover__header">
         <span class="xtb-popover__title">Tweet preview</span>
@@ -25,31 +31,40 @@
         <a class="xtb-popover__link" data-link target="_blank" rel="noopener noreferrer">Open tweet ↗</a>
       </div>
     `;
-    popoverEl.addEventListener("click", (e) => {
-      const target = e.target;
-      if (!(target instanceof HTMLElement)) return;
-      if (target.classList.contains("xtb-popover__close")) {
-        popoverEl.hidePopover();
-        // Best-effort cleanup of anchor props
-        popoverEl.style.removeProperty('position-anchor');
-        popoverEl.classList.remove('xtb-popover--anchored');
-      }
-    });
-    // Cleanup when closed from outside
-    popoverEl.addEventListener('toggle', () => {
-      try {
-        if (!popoverEl.matches(':popover-open')) {
-          popoverEl.style.removeProperty('position-anchor');
-          popoverEl.classList.remove('xtb-popover--anchored');
-        }
-      } catch (_) {}
-    });
+    // Direct close button binding
+    const closeBtn = popoverEl.querySelector('.xtb-popover__close');
+    if (closeBtn instanceof HTMLElement) {
+      closeBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        closePopover();
+      }, true);
+    }
+    // Global handlers: Escape, outside click
+    if (!document.__xtbPopoverBound) {
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') closePopover();
+      });
+      document.addEventListener('mousedown', (e) => {
+        if (!popoverEl) return;
+        const target = e.target;
+        if (!(target instanceof Node)) return;
+        const isInside = popoverEl.contains(target);
+        const isOnAnchor = lastAnchorEl instanceof HTMLElement && lastAnchorEl.contains(target);
+        const isVisible = popoverEl.style.display !== 'none';
+        if (isVisible && !isInside && !isOnAnchor) closePopover();
+      });
+      // flag to avoid duplicate bindings
+      Object.defineProperty(document, '__xtbPopoverBound', { value: true, configurable: false, enumerable: false, writable: false });
+    }
     document.body.appendChild(popoverEl);
     return popoverEl;
   }
 
   function showTweetPopover(anchorElement, article, url) {
     const pop = ensurePopover();
+    pop.style.display = 'block';
+    pop.removeAttribute('aria-hidden');
     const bodyEl = pop.querySelector('[data-body]');
     const linkEl = pop.querySelector('[data-link]');
     if (bodyEl) {
@@ -59,15 +74,7 @@
     }
     if (linkEl) linkEl.setAttribute("href", url || "#");
 
-    // Preferred: CSS anchor positioning (if supported)
-    const anchorName = `--xtb-anchor`;
-    try {
-      anchorElement.style.setProperty('anchor-name', anchorName);
-      pop.style.setProperty('position-anchor', anchorName);
-      pop.classList.add('xtb-popover--anchored');
-    } catch (_) {}
-
-    // Fallback manual positioning
+    // Manual positioning relative to anchor
     try {
       const rect = anchorElement.getBoundingClientRect();
       const maxWidth = Math.min(520, Math.max(280, Math.floor(window.innerWidth * 0.92)));
@@ -80,15 +87,8 @@
       left = Math.max(8, Math.min(left, window.innerWidth - maxWidth - 8));
       pop.style.top = `${Math.max(8, top)}px`;
       pop.style.left = `${left}px`;
+      lastAnchorEl = anchorElement;
     } catch (_) {}
-
-    try {
-      pop.showPopover();
-    } catch (_) {
-      // Fallback for older Chromium that might throw if already open
-      pop.hidePopover?.();
-      pop.showPopover?.();
-    }
   }
 
   function makeAbsoluteUrl(href) {
