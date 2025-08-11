@@ -214,4 +214,23 @@
   box-shadow: 0 0 0 2px rgba(156, 210, 255, 0.2);
 }
 
+.xtb-popover__actions {
+  padding: 0 12px 12px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.xtb-popover__create {
+  padding: 8px 12px;
+  background: #2a67f7;
+  color: white;
+  border: 0;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.xtb-popover__create:hover {
+  filter: brightness(1.08);
+}
+
 

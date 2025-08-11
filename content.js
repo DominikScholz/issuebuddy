@@ -20,21 +20,18 @@
     popoverEl.className = "xtb-popover";
     popoverEl.setAttribute("role", "dialog");
     popoverEl.innerHTML = `
-      <div class="xtb-popover__header">
-        <span class="xtb-popover__title">Tweet preview</span>
-        <button type="button" class="xtb-popover__close" aria-label="Close">✕</button>
+      <div class=\"xtb-popover__header\">
+        <span class=\"xtb-popover__title\">Create GitHub issue</span>
+        <button type=\"button\" class=\"xtb-popover__close\" aria-label=\"Close\">✕</button>
       </div>
-      <div class="xtb-popover__content">
-        <div class="xtb-popover__body" data-body></div>
-      </div>
-      <div class="xtb-popover__form">
-        <label class="xtb-field">
-          <span class="xtb-field__label">GitHub project</span>
-          <input type="text" class="xtb-field__input" data-github-input placeholder="owner/repo" inputmode="latin" autocapitalize="off" autocomplete="off" spellcheck="false" />
+      <div class=\"xtb-popover__form\">
+        <label class=\"xtb-field\">
+          <span class=\"xtb-field__label\">GitHub repository</span>
+          <input type=\"text\" class=\"xtb-field__input\" data-github-input placeholder=\"owner/repo\" inputmode=\"latin\" autocapitalize=\"off\" autocomplete=\"off\" spellcheck=\"false\" />
         </label>
       </div>
-      <div class="xtb-popover__footer">
-        <a class="xtb-popover__link" data-link target="_blank" rel="noopener noreferrer">Open tweet ↗</a>
+      <div class=\"xtb-popover__actions\">
+        <button type=\"button\" class=\"xtb-popover__create\" data-create-issue>Create issue</button>
       </div>
     `;
     // Direct close button binding
@@ -46,11 +43,11 @@
         closePopover();
       }, true);
     }
-    // Persist GitHub project input
+    // Persist GitHub repo input
     const ghInput = popoverEl.querySelector('[data-github-input]');
     if (ghInput instanceof HTMLInputElement) {
       ghInput.addEventListener('input', () => {
-        try { localStorage.setItem('xtb:githubProject', ghInput.value.trim()); } catch (_) {}
+        try { localStorage.setItem('xtb:githubRepo', ghInput.value.trim()); } catch (_) {}
       });
     }
     // Global handlers: Escape, outside click
@@ -78,18 +75,25 @@
     const pop = ensurePopover();
     pop.style.display = 'block';
     pop.removeAttribute('aria-hidden');
-    const bodyEl = pop.querySelector('[data-body]');
-    const linkEl = pop.querySelector('[data-link]');
-    if (bodyEl) {
-      bodyEl.innerHTML = "";
-      const frag = buildTweetContentFragment(article);
-      bodyEl.appendChild(frag);
+    // Wire up Create issue button to this article
+    const createBtn = pop.querySelector('[data-create-issue]');
+    if (createBtn instanceof HTMLElement) {
+      createBtn.onclick = () => {
+        const ghInput = pop.querySelector('[data-github-input]');
+        const repo = ghInput instanceof HTMLInputElement ? ghInput.value.trim() : '';
+        if (!/^[-\w.]+\/[.-\w]+$/.test(repo)) {
+          showToast(createBtn, 'Enter owner/repo');
+          return;
+        }
+        const issueUrl = buildIssueUrl(repo, article);
+        window.open(issueUrl, '_blank', 'noopener');
+        closePopover();
+      };
     }
-    if (linkEl) linkEl.setAttribute("href", url || "#");
     const ghInput = pop.querySelector('[data-github-input]');
     if (ghInput instanceof HTMLInputElement) {
       try {
-        const saved = localStorage.getItem('xtb:githubProject') || '';
+        const saved = localStorage.getItem('xtb:githubRepo') || '';
         if (!ghInput.value) ghInput.value = saved;
       } catch (_) {}
       // Slight defer to ensure layout is set before focus
@@ -137,6 +141,99 @@
       }
     });
     return best;
+  }
+
+  function getTweetTextWithEmojis(article) {
+    const root = findTweetTextContainer(article);
+    if (!root) return "";
+    let result = "";
+    const walk = (node) => {
+      if (!node) return;
+      if (node.nodeType === Node.TEXT_NODE) {
+        result += node.nodeValue || "";
+        return;
+      }
+      if (node.nodeType === Node.ELEMENT_NODE) {
+        const el = node;
+        if (el.tagName === 'IMG') {
+          const alt = el.getAttribute('alt');
+          if (alt) {
+            result += alt; // twemoji images carry emoji in alt
+            return;
+          }
+        }
+        // Line breaks for certain elements to keep readability
+        if (el.tagName === 'BR' || el.tagName === 'P' || el.tagName === 'DIV') {
+          if (result && !result.endsWith('\n')) result += '\n';
+        }
+        el.childNodes.forEach(walk);
+        return;
+      }
+    };
+    walk(root);
+    // Normalize whitespace: collapse >2 newlines, trim
+    return result.replace(/[\t\r]+/g, ' ').replace(/\n{3,}/g, '\n\n').trim();
+  }
+
+  function upgradeTwitterImageUrl(url) {
+    try {
+      const u = new URL(url, window.location.origin);
+      if (u.hostname.endsWith('pbs.twimg.com') && u.pathname.startsWith('/media/')) {
+        // Force larger image variant for readability
+        u.searchParams.set('name', 'large');
+        return u.toString();
+      }
+    } catch (_) {}
+    return url;
+  }
+
+  function collectTweetImageUrls(article) {
+    const imageSrcs = new Set();
+    const urls = [];
+    const selectors = [
+      "div[data-testid='tweetPhoto'] img",
+      "img[src*='pbs.twimg.com/media/']",
+      // Some builds lazy-load via srcset; pick best candidate if present
+      "div[data-testid='tweetPhoto'] img[srcset]",
+    ];
+    selectors.forEach((sel) => {
+      article.querySelectorAll(sel).forEach((img) => {
+        if (!(img instanceof HTMLImageElement)) return;
+        let src = img.currentSrc || img.src || img.getAttribute('src') || '';
+        if (!src) return;
+        if (/profile_images\//.test(src)) return; // skip avatars
+        if (imageSrcs.has(src)) return;
+        imageSrcs.add(src);
+        urls.push(upgradeTwitterImageUrl(src));
+      });
+    });
+    return urls;
+  }
+
+  function buildIssueUrl(repo, article) {
+    const base = `https://github.com/${repo}/issues/new`;
+    const tweetUrl = extractTweetUrl(article) || window.location.href;
+    const text = getTweetTextWithEmojis(article);
+    const title = (() => {
+      if (!text) return `Tweet reference`;
+      const chars = Array.from(text);
+      return chars.length > 80 ? chars.slice(0, 80).join("") : text;
+    })();
+    const bodyParts = [];
+    if (text) bodyParts.push(text);
+    const imgUrls = collectTweetImageUrls(article);
+    if (imgUrls.length > 0) {
+      bodyParts.push("");
+      imgUrls.forEach((u, i) => {
+        bodyParts.push(`![tweet image ${i + 1}](${u})`);
+      });
+    }
+    bodyParts.push("", `Source: ${tweetUrl}`);
+    const body = bodyParts.join("\n");
+    const params = new URLSearchParams();
+    params.set('title', title);
+    params.set('body', body);
+    return `${base}?${params.toString()}`;
   }
 
   function cloneTweetTextNode(article) {
@@ -232,7 +329,7 @@
     const button = document.createElement("button");
     button.type = "button";
     button.className = BUTTON_CLASS;
-    button.textContent = "Preview";
+    button.textContent = "Create issue";
     button.addEventListener("click", (event) => {
       event.stopPropagation();
       event.preventDefault();
