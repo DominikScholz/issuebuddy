@@ -49,14 +49,16 @@
             <input type="password" class="xtb-field__input" data-or-key placeholder="sk-or-..." />
           </label>
           <div class="xtb-ai-fields" style="display: none;">
-            <div class="xtb-toggle-section" style="margin-top: 16px;">
-              <button type="button" class="xtb-toggle-btn" data-toggle-title>Title system prompt</button>
-              <button type="button" class="xtb-toggle-btn xtb-toggle-btn--active" data-toggle-content>Content system prompt</button>
+            <div class="xtb-toggle-header" style="margin-top: 16px;">
+              <span class="xtb-toggle-section-label">System prompt for</span>
+              <div class="xtb-toggle-section">
+                <button type="button" class="xtb-toggle-btn" data-toggle-title>Title</button>
+                <button type="button" class="xtb-toggle-btn xtb-toggle-btn--active" data-toggle-content>Content</button>
+              </div>
             </div>
             <div class="xtb-toggle-content" data-toggle-title-content style="display: none;">
-              <div class="xtb-field" style="margin-top: 16px;">
+              <div class="xtb-field">
                 <div class="xtb-field__header">
-                  <span class="xtb-field__label">Title system prompt</span>
                   <div class="xtb-toggle-group">
                     <span class="xtb-toggle-label">Use AI</span>
                     <div class="xtb-toggle-switch">
@@ -65,13 +67,12 @@
                     </div>
                   </div>
                 </div>
-                <textarea class="xtb-field__input" data-or-system rows="3" placeholder="System prompt for generating issue titles...">You are a helpful assistant that writes concise, actionable GitHub issue titles based on tweets. Keep it under 80 characters, no trailing punctuation. Focus on the main problem or feature request mentioned.</textarea>
+                <textarea class="xtb-field__input" data-or-system rows="5" placeholder="System prompt for generating issue titles...">You are a helpful assistant that writes concise, actionable GitHub issue titles based on tweets. Keep it under 80 characters, no trailing punctuation. Focus on the main problem or feature request mentioned.</textarea>
               </div>
             </div>
             <div class="xtb-toggle-content" data-toggle-content-content>
-              <div class="xtb-field" style="margin-top: 16px;">
+              <div class="xtb-field">
                 <div class="xtb-field__header">
-                  <span class="xtb-field__label">Content system prompt</span>
                   <div class="xtb-toggle-group">
                     <span class="xtb-toggle-label">Use AI</span>
                     <div class="xtb-toggle-switch">
@@ -80,7 +81,7 @@
                     </div>
                   </div>
                 </div>
-                <textarea class="xtb-field__input" data-or-content rows="3" placeholder="System prompt for formatting issue content...">You are a helpful assistant that formats tweet content into clear, structured GitHub issue descriptions. Organize the content logically, identify the main points, and structure it in a way that developers can easily understand and act upon.</textarea>
+                <textarea class="xtb-field__input" data-or-content rows="5" placeholder="System prompt for formatting issue content...">You are a helpful assistant that formats tweet content into clear, structured GitHub issue descriptions. Organize the content logically, identify the main points, and structure it in a way that developers can easily understand and act upon.</textarea>
               </div>
             </div>
           </div>
