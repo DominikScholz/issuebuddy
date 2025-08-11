@@ -1,21 +1,22 @@
 .xtb-button {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 10px;
-  margin-left: 6px;
+  padding: 6px;
+  margin-left: 2px;
   border-radius: 9999px;
-  border: 1px solid rgba(120, 120, 120, 0.3);
   background: transparent;
   color: inherit;
   font: inherit;
   cursor: pointer;
   transition: background-color 120ms ease, border-color 120ms ease, transform 60ms ease;
+  width: 32px;
+  height: 32px;
+  color: #71767a !important;
 }
 
 .xtb-button:hover {
-  background: rgba(127, 127, 127, 0.12);
-  border-color: rgba(120, 120, 120, 0.5);
+  background: rgba(138, 9, 9, 0.32) !important;
+  color: rgb(255, 53, 53) !important;
 }
 
 .xtb-button:active {
