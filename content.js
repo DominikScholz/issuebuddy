@@ -41,14 +41,24 @@
           <span class="xtb-field__label">GitHub repository</span>
           <input type="text" class="xtb-field__input" data-github-input placeholder="owner/repo" inputmode="latin" autocapitalize="off" autocomplete="off" spellcheck="false" />
         </label>
-        <label class="xtb-field" style="margin-top: 10px;">
-          <span class="xtb-field__label">OpenRouter API key</span>
-          <input type="password" class="xtb-field__input" data-or-key placeholder="sk-or-..." />
-        </label>
-        <label class="xtb-field" style="margin-top: 8px;">
-          <span class="xtb-field__label">Title system prompt (optional)</span>
-          <textarea class="xtb-field__input" data-or-system rows="2" placeholder="e.g., Summarize the tweet into a concise, actionable GitHub issue title (<=80 chars)."></textarea>
-        </label>
+        
+        <div class="xtb-section" style="margin-top: 24px;">
+          <h3 class="xtb-section__title">AI (optional)</h3>
+          <label class="xtb-field" style="margin-top: 16px;">
+            <span class="xtb-field__label">OpenRouter API key</span>
+            <input type="password" class="xtb-field__input" data-or-key placeholder="sk-or-..." />
+          </label>
+          <div class="xtb-ai-fields" style="display: none;">
+            <label class="xtb-field" style="margin-top: 16px;">
+              <span class="xtb-field__label">Title system prompt</span>
+              <textarea class="xtb-field__input" data-or-system rows="2" placeholder="e.g., Summarize the tweet into a concise, actionable GitHub issue title (<=80 chars)."></textarea>
+            </label>
+            <label class="xtb-field" style="margin-top: 16px;">
+              <span class="xtb-field__label">Content system prompt</span>
+              <textarea class="xtb-field__input" data-or-content rows="2" placeholder="e.g., Format the tweet content as a clear, structured GitHub issue description."></textarea>
+            </label>
+          </div>
+        </div>
       </div>
       <div class="xtb-popover__actions">
         <button type="button" class="xtb-popover__create" data-create-issue>Create issue</button>
@@ -73,17 +83,45 @@
     // Load OpenRouter settings
     const orKeyInput = popoverEl.querySelector('[data-or-key]');
     const orSysInput = popoverEl.querySelector('[data-or-system]');
+    const orContentInput = popoverEl.querySelector('[data-or-content]');
+    const aiFields = popoverEl.querySelector('.xtb-ai-fields');
+    
     loadOpenRouterSettings().then((cfg) => {
       if (orKeyInput instanceof HTMLInputElement && !orKeyInput.value) orKeyInput.value = cfg.key || '';
       if (orSysInput instanceof HTMLTextAreaElement && !orSysInput.value) orSysInput.value = cfg.system || '';
+      if (orContentInput instanceof HTMLTextAreaElement && !orContentInput.value) orContentInput.value = cfg.content || '';
+      updateAiFieldsVisibility();
     }).catch(() => {});
+    
     const saveOrDebounced = debounce(() => {
       const key = orKeyInput instanceof HTMLInputElement ? orKeyInput.value.trim() : '';
       const system = orSysInput instanceof HTMLTextAreaElement ? orSysInput.value.trim() : '';
-      saveOpenRouterSettings({ key, system });
+      const content = orContentInput instanceof HTMLTextAreaElement ? orContentInput.value.trim() : '';
+      saveOpenRouterSettings({ key, system, content });
     }, 400);
-    if (orKeyInput) orKeyInput.addEventListener('input', saveOrDebounced);
+    
+    if (orKeyInput) {
+      orKeyInput.addEventListener('input', () => {
+        updateAiFieldsVisibility();
+        saveOrDebounced();
+      });
+    }
     if (orSysInput) orSysInput.addEventListener('input', saveOrDebounced);
+    if (orContentInput) orContentInput.addEventListener('input', saveOrDebounced);
+    
+    function updateAiFieldsVisibility() {
+      if (aiFields && orKeyInput instanceof HTMLInputElement) {
+        const hasKey = orKeyInput.value.trim().length > 0;
+        aiFields.style.display = hasKey ? 'block' : 'none';
+        
+        // Gray out fields when no key
+        const fields = aiFields.querySelectorAll('.xtb-field__input');
+        fields.forEach(field => {
+          field.style.opacity = hasKey ? '1' : '0.5';
+          field.disabled = !hasKey;
+        });
+      }
+    }
 
     // Global handlers: Escape, outside click
     if (!document.__xtbPopoverBound) {
@@ -154,7 +192,7 @@
       const left = (window.innerWidth - maxWidth) / 2;
       
       // Center vertically with some offset from top
-      const top = Math.max(16, (window.innerHeight - 480) / 2);
+      const top = Math.max(16, (window.innerHeight - 520) / 2);
       
       pop.style.top = `${top}px`;
       pop.style.left = `${left}px`;
@@ -306,21 +344,21 @@
   }
   function loadOpenRouterSettings() {
     return new Promise((resolve) => {
-      if (!chromeSyncAvailable()) return resolve({ key: '', system: '' });
+      if (!chromeSyncAvailable()) return resolve({ key: '', system: '', content: '' });
       try {
-        chrome.storage.sync.get({ xtbOpenRouterKey: '', xtbOpenRouterSystem: '' }, (data) => {
-          resolve({ key: data?.xtbOpenRouterKey || '', system: data?.xtbOpenRouterSystem || '' });
+        chrome.storage.sync.get({ xtbOpenRouterKey: '', xtbOpenRouterSystem: '', xtbOpenRouterContent: '' }, (data) => {
+          resolve({ key: data?.xtbOpenRouterKey || '', system: data?.xtbOpenRouterSystem || '', content: data?.xtbOpenRouterContent || '' });
         });
       } catch (_) {
-        resolve({ key: '', system: '' });
+        resolve({ key: '', system: '', content: '' });
       }
     });
   }
-  function saveOpenRouterSettings({ key, system }) {
+  function saveOpenRouterSettings({ key, system, content }) {
     return new Promise((resolve) => {
       if (!chromeSyncAvailable()) return resolve();
       try {
-        chrome.storage.sync.set({ xtbOpenRouterKey: key || '', xtbOpenRouterSystem: system || '' }, () => resolve());
+        chrome.storage.sync.set({ xtbOpenRouterKey: key || '', xtbOpenRouterSystem: system || '', xtbOpenRouterContent: content || '' }, () => resolve());
       } catch (_) {
         resolve();
       }
@@ -338,7 +376,7 @@
     try { return await loadOgKeyFromStorage(); } catch (_) { return ''; }
   }
   async function getStoredOpenRouter() {
-    try { return await loadOpenRouterSettings(); } catch (_) { return { key: '', system: '' }; }
+    try { return await loadOpenRouterSettings(); } catch (_) { return { key: '', system: '', content: '' }; }
   }
 
   async function deriveTitle(text, tweetUrl) {

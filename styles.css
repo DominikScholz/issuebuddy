@@ -98,8 +98,6 @@
 .xtb-popover {
   display: flex;
   flex-direction: column;
-  max-height: min(60vh, 480px);
-  overflow: hidden;
 }
 
 .xtb-popover__header {
@@ -226,10 +224,35 @@
   box-shadow: 0 0 0 2px rgba(156, 210, 255, 0.2);
 }
 
+.xtb-section {
+  border-top: 1px solid rgba(255,255,255,0.08);
+  padding-top: 16px;
+}
+
+.xtb-section__title {
+  font-size: 12px;
+  font-weight: 600;
+  opacity: 0.8;
+  margin: 0 0 8px 0;
+  color: #9cd2ff;
+}
+
+.xtb-ai-fields {
+  transition: opacity 0.2s ease;
+}
+
+.xtb-ai-fields .xtb-field__input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .xtb-popover__actions {
   padding: 0 12px 12px;
   display: flex;
   justify-content: flex-end;
+  flex-shrink: 0;
+  border-top: 1px solid rgba(255,255,255,0.08);
+  background: rgba(0, 0, 0, 0.98);
 }
 
 .xtb-popover__create {
