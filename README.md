@@ -7,7 +7,7 @@ A Chrome extension to easily create GitHub issues from tweets
 
 1. **Download the extension**
    ```bash
-   git clone https://github.com/your-username/issuebuddy.git
+   git clone https://github.com/DominikScholz/issuebuddy.git
    cd issuebuddy
    ```
 
