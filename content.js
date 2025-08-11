@@ -20,18 +20,26 @@
     popoverEl.className = "xtb-popover";
     popoverEl.setAttribute("role", "dialog");
     popoverEl.innerHTML = `
-      <div class=\"xtb-popover__header\">
-        <span class=\"xtb-popover__title\">Create GitHub issue</span>
-        <button type=\"button\" class=\"xtb-popover__close\" aria-label=\"Close\">✕</button>
+      <div class="xtb-popover__header">
+        <span class="xtb-popover__title">Create GitHub issue</span>
+        <button type="button" class="xtb-popover__close" aria-label="Close">✕</button>
       </div>
-      <div class=\"xtb-popover__form\">
-        <label class=\"xtb-field\">
-          <span class=\"xtb-field__label\">GitHub repository</span>
-          <input type=\"text\" class=\"xtb-field__input\" data-github-input placeholder=\"owner/repo\" inputmode=\"latin\" autocapitalize=\"off\" autocomplete=\"off\" spellcheck=\"false\" />
+      <div class="xtb-popover__form">
+        <label class="xtb-field">
+          <span class="xtb-field__label">GitHub repository</span>
+          <input type="text" class="xtb-field__input" data-github-input placeholder="owner/repo" inputmode="latin" autocapitalize="off" autocomplete="off" spellcheck="false" />
+        </label>
+        <label class="xtb-field" style="margin-top: 10px;">
+          <span class="xtb-field__label">OpenRouter API key</span>
+          <input type="password" class="xtb-field__input" data-or-key placeholder="sk-or-..." />
+        </label>
+        <label class="xtb-field" style="margin-top: 8px;">
+          <span class="xtb-field__label">Title system prompt (optional)</span>
+          <textarea class="xtb-field__input" data-or-system rows="2" placeholder="e.g., Summarize the tweet into a concise, actionable GitHub issue title (<=80 chars)."></textarea>
         </label>
       </div>
-      <div class=\"xtb-popover__actions\">
-        <button type=\"button\" class=\"xtb-popover__create\" data-create-issue>Create issue</button>
+      <div class="xtb-popover__actions">
+        <button type="button" class="xtb-popover__create" data-create-issue>Create issue</button>
       </div>
     `;
     // Direct close button binding
@@ -50,6 +58,21 @@
         try { localStorage.setItem('xtb:githubRepo', ghInput.value.trim()); } catch (_) {}
       });
     }
+    // Load OpenRouter settings
+    const orKeyInput = popoverEl.querySelector('[data-or-key]');
+    const orSysInput = popoverEl.querySelector('[data-or-system]');
+    loadOpenRouterSettings().then((cfg) => {
+      if (orKeyInput instanceof HTMLInputElement && !orKeyInput.value) orKeyInput.value = cfg.key || '';
+      if (orSysInput instanceof HTMLTextAreaElement && !orSysInput.value) orSysInput.value = cfg.system || '';
+    }).catch(() => {});
+    const saveOrDebounced = debounce(() => {
+      const key = orKeyInput instanceof HTMLInputElement ? orKeyInput.value.trim() : '';
+      const system = orSysInput instanceof HTMLTextAreaElement ? orSysInput.value.trim() : '';
+      saveOpenRouterSettings({ key, system });
+    }, 400);
+    if (orKeyInput) orKeyInput.addEventListener('input', saveOrDebounced);
+    if (orSysInput) orSysInput.addEventListener('input', saveOrDebounced);
+
     // Global handlers: Escape, outside click
     if (!document.__xtbPopoverBound) {
       document.addEventListener('keydown', (e) => {
@@ -78,14 +101,14 @@
     // Wire up Create issue button to this article
     const createBtn = pop.querySelector('[data-create-issue]');
     if (createBtn instanceof HTMLElement) {
-      createBtn.onclick = () => {
+      createBtn.onclick = async () => {
         const ghInput = pop.querySelector('[data-github-input]');
         const repo = ghInput instanceof HTMLInputElement ? ghInput.value.trim() : '';
         if (!/^[-\w.]+\/[.-\w]+$/.test(repo)) {
           showToast(createBtn, 'Enter owner/repo');
           return;
         }
-        const issueUrl = buildIssueUrl(repo, article);
+        const issueUrl = await buildIssueUrl(repo, article);
         window.open(issueUrl, '_blank', 'noopener');
         closePopover();
       };
@@ -210,15 +233,11 @@
     return urls;
   }
 
-  function buildIssueUrl(repo, article) {
+  async function buildIssueUrl(repo, article) {
     const base = `https://github.com/${repo}/issues/new`;
     const tweetUrl = extractTweetUrl(article) || window.location.href;
     const text = getTweetTextWithEmojis(article);
-    const title = (() => {
-      if (!text) return `Tweet reference`;
-      const chars = Array.from(text);
-      return chars.length > 80 ? chars.slice(0, 80).join("") : text;
-    })();
+    const title = await deriveTitle(text, tweetUrl);
     const bodyParts = [];
     if (text) bodyParts.push(text);
     const imgUrls = collectTweetImageUrls(article);
@@ -234,6 +253,144 @@
     params.set('title', title);
     params.set('body', body);
     return `${base}?${params.toString()}`;
+  }
+
+  function chromeSyncAvailable() {
+    return typeof chrome !== 'undefined' && chrome?.storage?.sync;
+  }
+  function loadOgKeyFromStorage() {
+    return new Promise((resolve, reject) => {
+      if (!chromeSyncAvailable()) return resolve('');
+      try {
+        chrome.storage.sync.get({ xtbOgApiKey: '' }, (data) => {
+          const err = chrome.runtime?.lastError;
+          if (err) return reject(err);
+          resolve(data?.xtbOgApiKey || '');
+        });
+      } catch (e) {
+        resolve('');
+      }
+    });
+  }
+  function saveOgKeyToStorage(value) {
+    return new Promise((resolve) => {
+      if (!chromeSyncAvailable()) return resolve();
+      try {
+        chrome.storage.sync.set({ xtbOgApiKey: value || '' }, () => resolve());
+      } catch (_) {
+        resolve();
+      }
+    });
+  }
+  function loadOpenRouterSettings() {
+    return new Promise((resolve) => {
+      if (!chromeSyncAvailable()) return resolve({ key: '', system: '' });
+      try {
+        chrome.storage.sync.get({ xtbOpenRouterKey: '', xtbOpenRouterSystem: '' }, (data) => {
+          resolve({ key: data?.xtbOpenRouterKey || '', system: data?.xtbOpenRouterSystem || '' });
+        });
+      } catch (_) {
+        resolve({ key: '', system: '' });
+      }
+    });
+  }
+  function saveOpenRouterSettings({ key, system }) {
+    return new Promise((resolve) => {
+      if (!chromeSyncAvailable()) return resolve();
+      try {
+        chrome.storage.sync.set({ xtbOpenRouterKey: key || '', xtbOpenRouterSystem: system || '' }, () => resolve());
+      } catch (_) {
+        resolve();
+      }
+    });
+  }
+  function debounce(fn, wait) {
+    let t = null;
+    return (...args) => {
+      if (t) clearTimeout(t);
+      t = setTimeout(() => fn(...args), wait);
+    };
+  }
+
+  async function getStoredOpenGraphKey() {
+    try { return await loadOgKeyFromStorage(); } catch (_) { return ''; }
+  }
+  async function getStoredOpenRouter() {
+    try { return await loadOpenRouterSettings(); } catch (_) { return { key: '', system: '' }; }
+  }
+
+  async function deriveTitle(text, tweetUrl) {
+    const fallback = (() => {
+      if (!text) return `Tweet reference`;
+      const chars = Array.from(text);
+      return chars.length > 80 ? chars.slice(0, 80).join("") : text;
+    })();
+
+    // 1) Try OpenRouter
+    try {
+      const { key, system } = await getStoredOpenRouter();
+      if (key) {
+        const prompt = `Tweet: ${text}\nLink: ${tweetUrl}\n\nReturn only an issue title (<=80 chars).`;
+        const sys = system && system.trim().length > 0
+          ? system.trim()
+          : 'You are a helpful assistant that writes concise, actionable GitHub issue titles based on tweets. Keep it under 80 characters, no trailing punctuation.';
+        const title = await fetchOpenRouterTitle(key, sys, prompt);
+        if (title) {
+          const chars = Array.from(title);
+          return chars.length > 80 ? chars.slice(0, 80).join("") : title;
+        }
+      }
+    } catch (_) { /* fall through */ }
+
+    // 2) Try OpenGraph as backup
+    try {
+      const apiKey = await getStoredOpenGraphKey();
+      if (apiKey) {
+        const endpoint = `https://opengraph.io/api/1.1/site/${encodeURIComponent(tweetUrl)}`;
+        const url = `${endpoint}?app_id=${encodeURIComponent(apiKey)}`;
+        const res = await fetch(url, { method: 'GET', credentials: 'omit' });
+        if (res.ok) {
+          const data = await res.json();
+          const ogTitle = data?.openGraph?.title || data?.hybridGraph?.title || '';
+          if (ogTitle) {
+            const chars = Array.from(ogTitle);
+            return chars.length > 80 ? chars.slice(0, 80).join("") : ogTitle;
+          }
+        }
+      }
+    } catch (_) { /* fall through */ }
+
+    // 3) Fallback: tweet text
+    return fallback;
+  }
+
+  async function fetchOpenRouterTitle(apiKey, systemPrompt, userPrompt) {
+    try {
+      const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          model: 'openrouter/auto',
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userPrompt },
+          ],
+          max_tokens: 120,
+          temperature: 0.2,
+        }),
+      });
+      if (!res.ok) return '';
+      const data = await res.json();
+      const content = data?.choices?.[0]?.message?.content || '';
+      // Take first line, trim, remove quotes
+      const firstLine = String(content).split('\n')[0].trim().replace(/^"|"$/g, '');
+      return firstLine;
+    } catch (_) {
+      return '';
+    }
   }
 
   function cloneTweetTextNode(article) {

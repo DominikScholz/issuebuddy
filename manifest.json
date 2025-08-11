@@ -3,13 +3,17 @@
   "name": "X Tweet Button Injector",
   "version": "0.1.0",
   "description": "Adds a custom button to tweets on X/Twitter.",
+  "permissions": [
+    "storage"
+  ],
   "host_permissions": [
     "https://x.com/*",
     "https://www.x.com/*",
     "https://mobile.x.com/*",
     "https://twitter.com/*",
     "https://www.twitter.com/*",
-    "https://mobile.twitter.com/*"
+    "https://mobile.twitter.com/*",
+    "https://openrouter.ai/*"
   ],
   "content_scripts": [
     {
