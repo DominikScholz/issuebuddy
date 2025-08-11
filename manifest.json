@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "X Tweet Button Injector",
+  "name": "issuebuddy",
   "version": "0.1.0",
-  "description": "Adds a custom button to tweets on X/Twitter.",
+  "description": "Easily create GitHub issues from tweets.",
   "permissions": [
     "storage"
   ],

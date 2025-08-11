@@ -67,7 +67,7 @@
                     </div>
                   </div>
                 </div>
-                <textarea class="xtb-field__input" data-or-system rows="5" placeholder="System prompt for generating issue titles...">You are a helpful assistant that writes concise, actionable GitHub issue titles based on tweets. Keep it under 80 characters, no trailing punctuation. Focus on the main problem or feature request mentioned.</textarea>
+                <textarea class="xtb-field__input" data-or-system rows="3" placeholder="System prompt for generating issue titles...">Expressive title, less than 80 chars, use prefix "bug:" if it is a bug report</textarea>
               </div>
             </div>
             <div class="xtb-toggle-content" data-toggle-content-content>
@@ -81,7 +81,7 @@
                     </div>
                   </div>
                 </div>
-                <textarea class="xtb-field__input" data-or-content rows="5" placeholder="System prompt for formatting issue content...">You are a helpful assistant that formats tweet content into clear, structured GitHub issue descriptions. Organize the content logically, identify the main points, and structure it in a way that developers can easily understand and act upon.</textarea>
+                <textarea class="xtb-field__input" data-or-content rows="5" placeholder="System prompt for formatting issue content...">Directly copy the tweet content into the issue body, format in the following way: user: @username, tweet: tweet content, source: tweet url</textarea>
               </div>
             </div>
           </div>
@@ -338,6 +338,42 @@
     return result.replace(/[\t\r]+/g, ' ').replace(/\n{3,}/g, '\n\n').trim();
   }
 
+  function getTweetUsername(article) {
+    // Try multiple selectors to find username
+    const selectors = [
+      'div[data-testid="User-Name"] a[href^="/"]',
+      'a[href^="/"][role="link"] span',
+      '[data-testid="User-Names"] a[href^="/"]'
+    ];
+    
+    for (const selector of selectors) {
+      const elements = article.querySelectorAll(selector);
+      for (const element of elements) {
+        const href = element.getAttribute('href');
+        if (href && href.startsWith('/') && !href.includes('/status/')) {
+          const username = href.slice(1); // Remove leading slash
+          if (username && !username.includes('/')) {
+            return `@${username}`;
+          }
+        }
+      }
+    }
+    
+    // Fallback: try to extract from URL if available
+    const tweetUrl = extractTweetUrl(article);
+    if (tweetUrl) {
+      try {
+        const url = new URL(tweetUrl);
+        const pathParts = url.pathname.split('/');
+        if (pathParts.length > 1 && pathParts[1]) {
+          return `@${pathParts[1]}`;
+        }
+      } catch (_) {}
+    }
+    
+    return '';
+  }
+
   function upgradeTwitterImageUrl(url) {
     try {
       const u = new URL(url, window.location.origin);
@@ -377,18 +413,36 @@
     const base = `https://github.com/${repo}/issues/new`;
     const tweetUrl = extractTweetUrl(article) || window.location.href;
     const text = getTweetTextWithEmojis(article);
-    const title = await deriveTitle(text, tweetUrl);
-    const bodyParts = [];
-    if (text) bodyParts.push(text);
+    const username = getTweetUsername(article);
+    const title = await deriveTitle(text, tweetUrl, username);
+    const content = await deriveContent(text, tweetUrl, username);
     const imgUrls = collectTweetImageUrls(article);
-    if (imgUrls.length > 0) {
-      bodyParts.push("");
-      imgUrls.forEach((u, i) => {
-        bodyParts.push(`![tweet image ${i + 1}](${u})`);
-      });
+    
+    // Use AI-generated content if available, otherwise fallback to original format
+    let body;
+    if (content && content !== text) {
+      // AI processed content
+      body = content;
+      if (imgUrls.length > 0) {
+        body += "\n\n";
+        imgUrls.forEach((u, i) => {
+          body += `![tweet image ${i + 1}](${u})\n`;
+        });
+      }
+    } else {
+      // Original format
+      const bodyParts = [];
+      if (text) bodyParts.push(text);
+      if (imgUrls.length > 0) {
+        bodyParts.push("");
+        imgUrls.forEach((u, i) => {
+          bodyParts.push(`![tweet image ${i + 1}](${u})`);
+        });
+      }
+      bodyParts.push("", `Source: ${tweetUrl}`);
+      body = bodyParts.join("\n");
     }
-    bodyParts.push("", `Source: ${tweetUrl}`);
-    const body = bodyParts.join("\n");
+    
     const params = new URLSearchParams();
     params.set('title', title);
     params.set('body', body);
@@ -477,7 +531,7 @@
     try { return await loadOpenRouterSettings(); } catch (_) { return { key: '', system: '', content: '', titleAiEnabled: true, contentAiEnabled: true }; }
   }
 
-  async function deriveTitle(text, tweetUrl) {
+  async function deriveTitle(text, tweetUrl, username) {
     const fallback = (() => {
       if (!text) return `Tweet reference`;
       const chars = Array.from(text);
@@ -486,9 +540,10 @@
 
     // 1) Try OpenRouter
     try {
-      const { key, system } = await getStoredOpenRouter();
-      if (key) {
-        const prompt = `Tweet: ${text}\nLink: ${tweetUrl}\n\nReturn only an issue title (<=80 chars).`;
+      const { key, system, titleAiEnabled } = await getStoredOpenRouter();
+      if (key && titleAiEnabled) {
+        const userInfo = username ? `User: ${username}\n` : '';
+        const prompt = `${userInfo}Tweet: ${text}\nLink: ${tweetUrl}\n\nReturn only an issue title (<=80 chars).`;
         const sys = system && system.trim().length > 0
           ? system.trim()
           : 'You are a helpful assistant that writes concise, actionable GitHub issue titles based on tweets. Keep it under 80 characters, no trailing punctuation.';
@@ -549,6 +604,54 @@
     } catch (_) {
       return '';
     }
+  }
+
+  async function fetchOpenRouterContent(apiKey, systemPrompt, userPrompt) {
+    try {
+      const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          model: 'openrouter/auto',
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userPrompt },
+          ],
+          max_tokens: 500,
+          temperature: 0.2,
+        }),
+      });
+      if (!res.ok) return '';
+      const data = await res.json();
+      const content = data?.choices?.[0]?.message?.content || '';
+      return content.trim();
+    } catch (_) {
+      return '';
+    }
+  }
+
+  async function deriveContent(text, tweetUrl, username) {
+    // Fallback: return original text
+    const fallback = text;
+
+    // Try OpenRouter for content processing
+    try {
+      const { key, content: contentSystemPrompt, contentAiEnabled } = await getStoredOpenRouter();
+      if (key && contentAiEnabled && contentSystemPrompt && contentSystemPrompt.trim().length > 0) {
+        const userInfo = username ? `User: ${username}\n` : '';
+        const prompt = `${userInfo}Tweet: ${text}\nLink: ${tweetUrl}\n\nFormat this tweet content according to the instructions.`;
+        const content = await fetchOpenRouterContent(key, contentSystemPrompt.trim(), prompt);
+        if (content) {
+          return content;
+        }
+      }
+    } catch (_) { /* fall through */ }
+
+    // Return fallback
+    return fallback;
   }
 
   function cloneTweetTextNode(article) {
