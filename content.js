@@ -12,9 +12,21 @@
     if (!popoverEl) return;
     popoverEl.style.display = 'none';
     popoverEl.setAttribute('aria-hidden', 'true');
+    
+    // Hide backdrop
+    const backdrop = document.getElementById('xtb-backdrop');
+    if (backdrop) {
+      backdrop.style.display = 'none';
+    }
   }
   function ensurePopover() {
     if (popoverEl && document.body.contains(popoverEl)) return popoverEl;
+    
+    // Create backdrop
+    const backdrop = document.createElement("div");
+    backdrop.className = "xtb-backdrop";
+    backdrop.id = "xtb-backdrop";
+    
     popoverEl = document.createElement("div");
     popoverEl.id = POPOVER_ID;
     popoverEl.className = "xtb-popover";
@@ -90,12 +102,22 @@
       // flag to avoid duplicate bindings
       Object.defineProperty(document, '__xtbPopoverBound', { value: true, configurable: false, enumerable: false, writable: false });
     }
+    
+    // Append backdrop first, then popover
+    document.body.appendChild(backdrop);
     document.body.appendChild(popoverEl);
     return popoverEl;
   }
 
   function showTweetPopover(anchorElement, article, url) {
     const pop = ensurePopover();
+    
+    // Show backdrop
+    const backdrop = document.getElementById('xtb-backdrop');
+    if (backdrop) {
+      backdrop.style.display = 'block';
+    }
+    
     pop.style.display = 'block';
     pop.removeAttribute('aria-hidden');
     // Wire up Create issue button to this article
@@ -123,18 +145,18 @@
       setTimeout(() => { ghInput.focus({ preventScroll: true }); }, 0);
     }
 
-    // Manual positioning relative to anchor
+    // Center popup on screen
     try {
-      const rect = anchorElement.getBoundingClientRect();
       const maxWidth = Math.min(520, Math.max(280, Math.floor(window.innerWidth * 0.92)));
       pop.style.width = `${maxWidth}px`;
-      const top = Math.min(
-        window.innerHeight - 16,
-        rect.bottom + 8
-      );
-      let left = rect.left + rect.width / 2 - maxWidth / 2;
-      left = Math.max(8, Math.min(left, window.innerWidth - maxWidth - 8));
-      pop.style.top = `${Math.max(8, top)}px`;
+      
+      // Center horizontally
+      const left = (window.innerWidth - maxWidth) / 2;
+      
+      // Center vertically with some offset from top
+      const top = Math.max(16, (window.innerHeight - 480) / 2);
+      
+      pop.style.top = `${top}px`;
       pop.style.left = `${left}px`;
       lastAnchorEl = anchorElement;
     } catch (_) {}
