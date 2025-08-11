@@ -81,4 +81,152 @@
   outline: 2px dashed rgba(200, 140, 0, 0.6) !important;
 }
 
+/* Fallback floating action button placement inside tweet card */
+.xtb-host-relative {
+  position: relative;
+}
+
+.xtb-fab {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none; /* allow tweet interactions */
+  z-index: 2147483646;
+}
+
+.xtb-fab .xtb-button {
+  pointer-events: auto;
+  background: rgba(0,0,0,0.55);
+  color: #fff;
+  border-color: rgba(255,255,255,0.35);
+}
+
+/* Popover */
+#xtb-popover[popover] {
+  position: fixed;
+  inset: auto auto auto auto;
+  margin: 0;
+  padding: 0;
+  border: 1px solid rgba(120,120,120,0.25);
+  border-radius: 10px;
+  background: rgba(28,28,28,0.98);
+  color: #eaeaea;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+  z-index: 2147483647;
+}
+
+/* CSS anchor positioning when supported */
+.xtb-popover--anchored {
+  position: fixed;
+  inset: auto auto auto auto;
+  /* The anchor-name is set inline on the trigger button */
+  position-try-fallbacks: flip-block, flip-inline;
+  /* Prefer below the anchor with slight offset */
+  top: anchor(--xtb-anchor top);
+  left: anchor(--xtb-anchor center);
+  transform: translateX(-50%) translateY(8px);
+}
+
+.xtb-popover {
+  display: flex;
+  flex-direction: column;
+  max-height: min(60vh, 480px);
+  overflow: hidden;
+}
+
+.xtb-popover__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 12px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+
+.xtb-popover__title {
+  font-weight: 600;
+  font-size: 12px;
+  opacity: 0.8;
+}
+
+.xtb-popover__close {
+  border: 1px solid rgba(255,255,255,0.16);
+  background: #2a2a2a;
+  color: #ddd;
+  border-radius: 6px;
+  padding: 4px 8px;
+  cursor: pointer;
+}
+
+.xtb-popover__content {
+  padding: 12px;
+  overflow: auto;
+}
+
+.xtb-popover__text {
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 14px;
+  line-height: 1.4;
+}
+.xtb-popover__text img {
+  display: inline-block;
+  height: 1.2em;
+  width: 1.2em;
+}
+
+.xtb-popover__body :where(a) {
+  color: #9cd2ff;
+  text-decoration: none;
+}
+
+.xtb-popover__body :where(a:hover) {
+  text-decoration: underline;
+}
+
+.xtb-popover__media {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.xtb-popover__image {
+  width: 100%;
+  height: auto;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+
+.xtb-popover__card {
+  margin-top: 10px;
+}
+
+.xtb-popover__cardlink {
+  color: #9cd2ff;
+  text-decoration: none;
+}
+
+.xtb-popover__cardlink:hover {
+  text-decoration: underline;
+}
+
+.xtb-popover__footer {
+  padding: 10px 12px 12px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.xtb-popover__link {
+  color: #9cd2ff;
+  text-decoration: none;
+}
+
+.xtb-popover__link:hover {
+  text-decoration: underline;
+}
+
 
