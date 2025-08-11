@@ -1,0 +1,27 @@
+{
+  "manifest_version": 3,
+  "name": "X Tweet Button Injector",
+  "version": "0.1.0",
+  "description": "Adds a custom button to tweets on X/Twitter.",
+  "host_permissions": [
+    "https://x.com/*",
+    "https://www.x.com/*",
+    "https://mobile.x.com/*",
+    "https://twitter.com/*",
+    "https://www.twitter.com/*",
+    "https://mobile.twitter.com/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "https://x.com/*",
+        "https://twitter.com/*"
+      ],
+      "js": ["content.js"],
+      "css": ["styles.css"],
+      "run_at": "document_idle"
+    }
+  ]
+}
+
+
