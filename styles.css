@@ -183,4 +183,35 @@
   text-decoration: underline;
 }
 
+.xtb-popover__form {
+  padding: 0 12px 8px;
+}
+
+.xtb-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.xtb-field__label {
+  font-size: 12px;
+  opacity: 0.8;
+}
+
+.xtb-field__input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 8px 10px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.14);
+  border-radius: 8px;
+  color: #eaeaea;
+  outline: none;
+}
+
+.xtb-field__input:focus {
+  border-color: rgba(156, 210, 255, 0.6);
+  box-shadow: 0 0 0 2px rgba(156, 210, 255, 0.2);
+}
+
 

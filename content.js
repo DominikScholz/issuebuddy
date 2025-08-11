@@ -27,6 +27,12 @@
       <div class="xtb-popover__content">
         <div class="xtb-popover__body" data-body></div>
       </div>
+      <div class="xtb-popover__form">
+        <label class="xtb-field">
+          <span class="xtb-field__label">GitHub project</span>
+          <input type="text" class="xtb-field__input" data-github-input placeholder="owner/repo" inputmode="latin" autocapitalize="off" autocomplete="off" spellcheck="false" />
+        </label>
+      </div>
       <div class="xtb-popover__footer">
         <a class="xtb-popover__link" data-link target="_blank" rel="noopener noreferrer">Open tweet ↗</a>
       </div>
@@ -39,6 +45,13 @@
         e.stopPropagation();
         closePopover();
       }, true);
+    }
+    // Persist GitHub project input
+    const ghInput = popoverEl.querySelector('[data-github-input]');
+    if (ghInput instanceof HTMLInputElement) {
+      ghInput.addEventListener('input', () => {
+        try { localStorage.setItem('xtb:githubProject', ghInput.value.trim()); } catch (_) {}
+      });
     }
     // Global handlers: Escape, outside click
     if (!document.__xtbPopoverBound) {
@@ -73,6 +86,15 @@
       bodyEl.appendChild(frag);
     }
     if (linkEl) linkEl.setAttribute("href", url || "#");
+    const ghInput = pop.querySelector('[data-github-input]');
+    if (ghInput instanceof HTMLInputElement) {
+      try {
+        const saved = localStorage.getItem('xtb:githubProject') || '';
+        if (!ghInput.value) ghInput.value = saved;
+      } catch (_) {}
+      // Slight defer to ensure layout is set before focus
+      setTimeout(() => { ghInput.focus({ preventScroll: true }); }, 0);
+    }
 
     // Manual positioning relative to anchor
     try {
