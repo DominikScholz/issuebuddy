@@ -111,8 +111,8 @@
 
 .xtb-popover__title {
   font-weight: 600;
-  font-size: 12px;
-  opacity: 0.8;
+  font-size: 14px;
+  opacity: 0.9;
 }
 
 .xtb-popover__close {
@@ -204,8 +204,9 @@
 }
 
 .xtb-field__label {
-  font-size: 12px;
-  opacity: 0.8;
+  font-size: 13px;
+  font-weight: 500;
+  opacity: 0.9;
 }
 
 .xtb-field__input {
@@ -230,10 +231,10 @@
 }
 
 .xtb-section__title {
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 600;
-  opacity: 0.8;
-  margin: 0 0 8px 0;
+  opacity: 0.9;
+  margin: 0 0 12px 0;
   color: #9cd2ff;
 }
 
@@ -246,6 +247,119 @@
   cursor: not-allowed;
 }
 
+.xtb-toggle-section {
+  display: flex;
+  gap: 0;
+  margin-bottom: 16px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.14);
+  border-radius: 24px;
+  padding: 3px;
+  width: fit-content;
+}
+
+.xtb-toggle-btn {
+  padding: 8px 20px;
+  background: transparent;
+  border: none;
+  border-radius: 20px;
+  color: #eaeaea;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
+  min-width: 120px;
+}
+
+.xtb-toggle-btn:hover {
+  background: rgba(255,255,255,0.05);
+}
+
+.xtb-toggle-btn--active {
+  background: #2a67f7;
+  color: white;
+  box-shadow: 0 2px 8px rgba(42, 103, 247, 0.3);
+}
+
+.xtb-toggle-content {
+  transition: opacity 0.2s ease;
+}
+
+.xtb-field__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.xtb-toggle-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.xtb-toggle-switch {
+  display: flex;
+  align-items: center;
+}
+
+.xtb-toggle-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: #eaeaea;
+}
+
+.xtb-toggle-switch input[type="checkbox"] {
+  display: none;
+}
+
+.xtb-toggle-switch__label {
+  display: flex;
+  align-items: center;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.14);
+  border-radius: 18px;
+  padding: 2px;
+  cursor: pointer;
+  position: relative;
+  width: 44px;
+  height: 24px;
+  transition: all 0.2s ease;
+}
+
+.xtb-toggle-switch__label:hover {
+  background: rgba(255,255,255,0.1);
+  border-color: rgba(255,255,255,0.2);
+}
+
+
+
+.xtb-toggle-switch input[type="checkbox"]:checked + .xtb-toggle-switch__label {
+  background: #2a67f7;
+  border-color: #2a67f7;
+}
+
+
+
+.xtb-toggle-switch__label::before {
+  content: '';
+  position: absolute;
+  left: 2px;
+  top: 2px;
+  width: 20px;
+  height: 20px;
+  background: white;
+  border-radius: 50%;
+  transition: transform 0.2s ease;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+
+.xtb-toggle-switch input[type="checkbox"]:checked + .xtb-toggle-switch__label::before {
+  transform: translateX(20px);
+}
+
 .xtb-popover__actions {
   padding: 0 12px 12px;
   display: flex;
@@ -256,12 +370,14 @@
 }
 
 .xtb-popover__create {
-  padding: 8px 12px;
+  padding: 10px 20px;
   background: #2a67f7;
   color: white;
   border: 0;
-  border-radius: 8px;
+  border-radius: 10px;
   cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
 }
 
 .xtb-popover__create:hover {

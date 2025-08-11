@@ -49,14 +49,40 @@
             <input type="password" class="xtb-field__input" data-or-key placeholder="sk-or-..." />
           </label>
           <div class="xtb-ai-fields" style="display: none;">
-            <label class="xtb-field" style="margin-top: 16px;">
-              <span class="xtb-field__label">Title system prompt</span>
-              <textarea class="xtb-field__input" data-or-system rows="2" placeholder="e.g., Summarize the tweet into a concise, actionable GitHub issue title (<=80 chars)."></textarea>
-            </label>
-            <label class="xtb-field" style="margin-top: 16px;">
-              <span class="xtb-field__label">Content system prompt</span>
-              <textarea class="xtb-field__input" data-or-content rows="2" placeholder="e.g., Format the tweet content as a clear, structured GitHub issue description."></textarea>
-            </label>
+            <div class="xtb-toggle-section" style="margin-top: 16px;">
+              <button type="button" class="xtb-toggle-btn" data-toggle-title>Title system prompt</button>
+              <button type="button" class="xtb-toggle-btn xtb-toggle-btn--active" data-toggle-content>Content system prompt</button>
+            </div>
+            <div class="xtb-toggle-content" data-toggle-title-content style="display: none;">
+              <div class="xtb-field" style="margin-top: 16px;">
+                <div class="xtb-field__header">
+                  <span class="xtb-field__label">Title system prompt</span>
+                  <div class="xtb-toggle-group">
+                    <span class="xtb-toggle-label">Use AI</span>
+                    <div class="xtb-toggle-switch">
+                      <input type="checkbox" id="title-ai-toggle" data-title-ai-toggle checked />
+                      <label for="title-ai-toggle" class="xtb-toggle-switch__label"></label>
+                    </div>
+                  </div>
+                </div>
+                <textarea class="xtb-field__input" data-or-system rows="3" placeholder="System prompt for generating issue titles...">You are a helpful assistant that writes concise, actionable GitHub issue titles based on tweets. Keep it under 80 characters, no trailing punctuation. Focus on the main problem or feature request mentioned.</textarea>
+              </div>
+            </div>
+            <div class="xtb-toggle-content" data-toggle-content-content>
+              <div class="xtb-field" style="margin-top: 16px;">
+                <div class="xtb-field__header">
+                  <span class="xtb-field__label">Content system prompt</span>
+                  <div class="xtb-toggle-group">
+                    <span class="xtb-toggle-label">Use AI</span>
+                    <div class="xtb-toggle-switch">
+                      <input type="checkbox" id="content-ai-toggle" data-content-ai-toggle checked />
+                      <label for="content-ai-toggle" class="xtb-toggle-switch__label"></label>
+                    </div>
+                  </div>
+                </div>
+                <textarea class="xtb-field__input" data-or-content rows="3" placeholder="System prompt for formatting issue content...">You are a helpful assistant that formats tweet content into clear, structured GitHub issue descriptions. Organize the content logically, identify the main points, and structure it in a way that developers can easily understand and act upon.</textarea>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -90,14 +116,19 @@
       if (orKeyInput instanceof HTMLInputElement && !orKeyInput.value) orKeyInput.value = cfg.key || '';
       if (orSysInput instanceof HTMLTextAreaElement && !orSysInput.value) orSysInput.value = cfg.system || '';
       if (orContentInput instanceof HTMLTextAreaElement && !orContentInput.value) orContentInput.value = cfg.content || '';
+      if (titleAiToggle) titleAiToggle.checked = cfg.titleAiEnabled;
+      if (contentAiToggle) contentAiToggle.checked = cfg.contentAiEnabled;
       updateAiFieldsVisibility();
+      updateTextareaStates();
     }).catch(() => {});
     
     const saveOrDebounced = debounce(() => {
       const key = orKeyInput instanceof HTMLInputElement ? orKeyInput.value.trim() : '';
       const system = orSysInput instanceof HTMLTextAreaElement ? orSysInput.value.trim() : '';
       const content = orContentInput instanceof HTMLTextAreaElement ? orContentInput.value.trim() : '';
-      saveOpenRouterSettings({ key, system, content });
+      const titleAiEnabled = titleAiToggle ? titleAiToggle.checked : true;
+      const contentAiEnabled = contentAiToggle ? contentAiToggle.checked : true;
+      saveOpenRouterSettings({ key, system, content, titleAiEnabled, contentAiEnabled });
     }, 400);
     
     if (orKeyInput) {
@@ -108,6 +139,54 @@
     }
     if (orSysInput) orSysInput.addEventListener('input', saveOrDebounced);
     if (orContentInput) orContentInput.addEventListener('input', saveOrDebounced);
+    
+    // Toggle functionality for system prompts
+    const toggleTitleBtn = popoverEl.querySelector('[data-toggle-title]');
+    const toggleContentBtn = popoverEl.querySelector('[data-toggle-content]');
+    const titleContent = popoverEl.querySelector('[data-toggle-title-content]');
+    const contentContent = popoverEl.querySelector('[data-toggle-content-content]');
+    
+    if (toggleTitleBtn && toggleContentBtn && titleContent && contentContent) {
+      toggleTitleBtn.addEventListener('click', () => {
+        toggleTitleBtn.classList.add('xtb-toggle-btn--active');
+        toggleContentBtn.classList.remove('xtb-toggle-btn--active');
+        titleContent.style.display = 'block';
+        contentContent.style.display = 'none';
+      });
+      
+      toggleContentBtn.addEventListener('click', () => {
+        toggleContentBtn.classList.add('xtb-toggle-btn--active');
+        toggleTitleBtn.classList.remove('xtb-toggle-btn--active');
+        contentContent.style.display = 'block';
+        titleContent.style.display = 'none';
+      });
+    }
+    
+    // On/off toggle functionality for AI vs verbatim
+    const titleAiToggle = popoverEl.querySelector('[data-title-ai-toggle]');
+    const contentAiToggle = popoverEl.querySelector('[data-content-ai-toggle]');
+    
+    if (titleAiToggle && contentAiToggle) {
+      titleAiToggle.addEventListener('change', () => {
+        updateTextareaStates();
+        saveOrDebounced();
+      });
+      contentAiToggle.addEventListener('change', () => {
+        updateTextareaStates();
+        saveOrDebounced();
+      });
+    }
+    
+    function updateTextareaStates() {
+      if (orSysInput) {
+        orSysInput.disabled = !titleAiToggle.checked;
+        orSysInput.style.opacity = titleAiToggle.checked ? '1' : '0.5';
+      }
+      if (orContentInput) {
+        orContentInput.disabled = !contentAiToggle.checked;
+        orContentInput.style.opacity = contentAiToggle.checked ? '1' : '0.5';
+      }
+    }
     
     function updateAiFieldsVisibility() {
       if (aiFields && orKeyInput instanceof HTMLInputElement) {
@@ -344,21 +423,39 @@
   }
   function loadOpenRouterSettings() {
     return new Promise((resolve) => {
-      if (!chromeSyncAvailable()) return resolve({ key: '', system: '', content: '' });
+      if (!chromeSyncAvailable()) return resolve({ key: '', system: '', content: '', titleAiEnabled: true, contentAiEnabled: true });
       try {
-        chrome.storage.sync.get({ xtbOpenRouterKey: '', xtbOpenRouterSystem: '', xtbOpenRouterContent: '' }, (data) => {
-          resolve({ key: data?.xtbOpenRouterKey || '', system: data?.xtbOpenRouterSystem || '', content: data?.xtbOpenRouterContent || '' });
+        chrome.storage.sync.get({ 
+          xtbOpenRouterKey: '', 
+          xtbOpenRouterSystem: '', 
+          xtbOpenRouterContent: '', 
+          xtbTitleAiEnabled: true, 
+          xtbContentAiEnabled: true 
+        }, (data) => {
+          resolve({ 
+            key: data?.xtbOpenRouterKey || '', 
+            system: data?.xtbOpenRouterSystem || '', 
+            content: data?.xtbOpenRouterContent || '',
+            titleAiEnabled: data?.xtbTitleAiEnabled !== false,
+            contentAiEnabled: data?.xtbContentAiEnabled !== false
+          });
         });
       } catch (_) {
-        resolve({ key: '', system: '', content: '' });
+        resolve({ key: '', system: '', content: '', titleAiEnabled: true, contentAiEnabled: true });
       }
     });
   }
-  function saveOpenRouterSettings({ key, system, content }) {
+  function saveOpenRouterSettings({ key, system, content, titleAiEnabled, contentAiEnabled }) {
     return new Promise((resolve) => {
       if (!chromeSyncAvailable()) return resolve();
       try {
-        chrome.storage.sync.set({ xtbOpenRouterKey: key || '', xtbOpenRouterSystem: system || '', xtbOpenRouterContent: content || '' }, () => resolve());
+        chrome.storage.sync.set({ 
+          xtbOpenRouterKey: key || '', 
+          xtbOpenRouterSystem: system || '', 
+          xtbOpenRouterContent: content || '',
+          xtbTitleAiEnabled: titleAiEnabled !== false,
+          xtbContentAiEnabled: contentAiEnabled !== false
+        }, () => resolve());
       } catch (_) {
         resolve();
       }
@@ -376,7 +473,7 @@
     try { return await loadOgKeyFromStorage(); } catch (_) { return ''; }
   }
   async function getStoredOpenRouter() {
-    try { return await loadOpenRouterSettings(); } catch (_) { return { key: '', system: '', content: '' }; }
+    try { return await loadOpenRouterSettings(); } catch (_) { return { key: '', system: '', content: '', titleAiEnabled: true, contentAiEnabled: true }; }
   }
 
   async function deriveTitle(text, tweetUrl) {
