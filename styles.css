@@ -42,44 +42,7 @@
   transform: translateX(-50%) translateY(-4px);
 }
 
-/* DEBUG */
-.xtb-debug-hud {
-  position: fixed;
-  bottom: 8px;
-  right: 8px;
-  background: rgba(20, 20, 20, 0.9);
-  color: #e6e6e6;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 8px;
-  padding: 8px 10px;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-  font-size: 12px;
-  z-index: 2147483647;
-}
-
-.xtb-debug-hud__row {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  margin: 2px 0;
-}
-
-.xtb-debug-hud button {
-  padding: 2px 6px;
-  background: #2a2a2a;
-  color: #ddd;
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  border-radius: 5px;
-  cursor: pointer;
-}
-
-.xtb-debug-injected {
-  outline: 2px solid rgba(0, 200, 120, 0.6) !important;
-}
-
-.xtb-debug-miss-action {
-  outline: 2px dashed rgba(200, 140, 0, 0.6) !important;
-}
+/* removed debug HUD/styles */
 
 /* Fallback floating action button placement inside tweet card */
 .xtb-host-relative {

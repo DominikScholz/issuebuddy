@@ -1,62 +1,10 @@
 (() => {
-  const DEBUG = true; // flip to false to disable HUD/logging
-  const LOG_PREFIX = "[xtb]";
   const TWEET_SELECTOR = "article[data-testid='tweet'], article[role='article']";
   const BUTTON_CLASS = "xtb-button";
   const PROCESSED_ATTR = "data-xtb-has-button";
-  const DEBUG_INJECTED = "xtb-debug-injected";
-  const DEBUG_MISS_ACTION = "xtb-debug-miss-action";
   const POPOVER_ID = "xtb-popover";
 
-  const stats = {
-    scanned: 0,
-    injected: 0,
-    already: 0,
-    noActionBar: 0,
-    errors: 0,
-  };
-
-  function log(...args) {
-    if (!DEBUG) return;
-    // eslint-disable-next-line no-console
-    console.log(LOG_PREFIX, ...args);
-  }
-
-  let hudEl = null;
-  function ensureHud() {
-    if (!DEBUG || hudEl) return;
-    hudEl = document.createElement("div");
-    hudEl.className = "xtb-debug-hud";
-    hudEl.innerHTML = `
-      <div class="xtb-debug-hud__row">
-        <strong>XTB</strong>
-        <button type="button" data-action="rescan">Rescan</button>
-        <button type="button" data-action="hide">Hide</button>
-      </div>
-      <div class="xtb-debug-hud__row" data-kv></div>
-    `;
-    hudEl.addEventListener("click", (e) => {
-      const target = e.target;
-      if (!(target instanceof HTMLElement)) return;
-      const action = target.getAttribute("data-action");
-      if (action === "rescan") {
-        scanAndInject();
-        updateHud();
-      }
-      if (action === "hide") {
-        hudEl.style.display = "none";
-      }
-    });
-    document.documentElement.appendChild(hudEl);
-    updateHud();
-  }
-
-  function updateHud() {
-    if (!DEBUG || !hudEl) return;
-    const kv = hudEl.querySelector('[data-kv]');
-    if (!kv) return;
-    kv.textContent = `scanned: ${stats.scanned} | injected: ${stats.injected} | already: ${stats.already} | noActionBar: ${stats.noActionBar} | errors: ${stats.errors}`;
-  }
+  
 
   let popoverEl = null;
   function ensurePopover() {
@@ -348,18 +296,14 @@
   }
 
   function injectIntoArticle(article) {
-    stats.scanned += 1;
     if (article.getAttribute(PROCESSED_ATTR) === "1") {
-      stats.already += 1;
       return;
     }
 
     try {
       let targetContainer = findActionBar(article);
-      let placement = "actionBar";
       if (!targetContainer) {
         targetContainer = findTimestampContainer(article);
-        placement = targetContainer ? "timestamp" : "fab";
       }
       if (!targetContainer) {
         targetContainer = ensureFabContainer(article);
@@ -372,15 +316,8 @@
 
       targetContainer.appendChild(button);
       article.setAttribute(PROCESSED_ATTR, "1");
-      stats.injected += 1;
-      if (DEBUG) article.classList.add(DEBUG_INJECTED);
-      log("injected button into tweet", { url: extractTweetUrl(article), placement });
-      updateHud();
     } catch (err) {
-      stats.errors += 1;
-      updateHud();
-      // eslint-disable-next-line no-console
-      console.error(LOG_PREFIX, "inject error", err);
+      // swallow
     }
   }
 
@@ -389,12 +326,9 @@
     for (const article of articles) {
       injectIntoArticle(article);
     }
-    updateHud();
   }
 
   // Initial scan
-  if (DEBUG) ensureHud();
-  log("content script loaded");
   scanAndInject();
 
   // Observe dynamic page updates
@@ -409,7 +343,6 @@
         }
       }
     }
-    updateHud();
   });
 
   observer.observe(document.body, { childList: true, subtree: true });
