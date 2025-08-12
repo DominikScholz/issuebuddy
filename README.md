@@ -1,6 +1,8 @@
 # issuebuddy
 A Chrome extension to easily create GitHub issues from tweets
 
+<img width="256" height="256" alt="image" src="https://github.com/user-attachments/assets/284b55af-1dad-447b-9674-90f2dea0579a" />
+
 ## Installation
 
 ### Install from Source (Developer Mode)
